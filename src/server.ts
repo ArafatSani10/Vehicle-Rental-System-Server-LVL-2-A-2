@@ -132,6 +132,77 @@ app.get("/api/v1/users", async (req: Request, res: Response) => {
 
 
 
+// update user
+app.put("/api/v1/users/:userId", async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { name, phone, email } = req.body;
+
+    try {
+        const result = await pool.query(
+            `UPDATE Users SET name =$1, email=$2, phone=$3 WHERE id=$4 RETURNING *`,
+            [name, email, phone, userId]
+        );
+
+        if (result.rows.length === 0) {
+            res.status(404).json({
+                success: false,
+                message: "user not found..!"
+            });
+        }
+        else {
+            res.status(200).json({
+                success: true,
+                message: 'User updated successfully',
+                data: result.rows[0],
+            });
+        }
+    }
+    catch (err: any) {
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+});
+
+
+// delete user
+
+app.delete("/api/v1/users/:userId", async (req: Request, res: Response) => {
+    const { userId } = req.params;
+
+
+    try {
+        const result = await pool.query(`
+        DELETE FROM Users WHERE id =$1
+        `, [userId]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+
+        else {
+            res.status(200).json({
+                success: true,
+                message: "User deleted successfully",
+                data: null,
+            })
+        }
+    }
+
+    catch (err: any) {
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+})
+
+
 
 
 
