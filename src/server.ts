@@ -4,10 +4,11 @@ import dotenv from "dotenv";
 import { Pool } from "pg";
 import path from "path";
 
-
 dotenv.config({ path: path.join(process.cwd(), ".env") });
 const app = express();
 const port = 5000;
+// parser
+app.use(express.json());
 
 
 // database
@@ -28,9 +29,9 @@ const initDB = async () => {
         create_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
         );
-        
-        
-        
+
+
+
         `);
 
 
@@ -60,7 +61,7 @@ const initDB = async () => {
         updated_at TIMESTAMP DEFAULT NOW()
        );
 
-  
+
      `);
 };
 
@@ -73,15 +74,70 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Next level Web development is running..!')
 });
 
-// parser
-app.use(express.json());
 
 
 
 
 
-// vehicles related apis
+// Users CRUD
+// create user
+app.post("/api/v1/auth/signup", async (req: Request, res: Response) => {
 
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO Users(name, email, phone) VALUES($1, $2, $3) RETURNING *`,
+            [req.body.name, req.body.email, req.body.phone]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: "User registered successfully",
+            data: result.rows[0],
+        });
+    } catch (err: any) {
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+});
+
+
+// get all users
+
+app.get("/api/v1/users", async (req: Request, res: Response) => {
+
+    try {
+        const result = await pool.query(`
+
+        SELECT id,name,email,phone FROM Users
+        `);
+
+
+        res.status(200).json({
+            success: true,
+            data: result.rows
+        });
+    }
+
+    catch (err: any) {
+        res.status(500).json({
+            success: false,
+            message: err.message,
+        })
+    }
+
+});
+
+
+
+
+
+
+
+
+// vehicles CRUD
 // add vehicles
 app.post("/api/v1/vehicles", async (req: Request, res: Response) => {
     const { vehicle_name, type, registration_number, daily_rent_price, availability_status } = req.body;
@@ -234,6 +290,13 @@ app.delete("/api/v1/vehicles/:vehicleId", async (req: Request, res: Response) =>
 });
 
 
+// Bookings CRUD
+
+
+
+
+
+
 
 
 
@@ -249,5 +312,9 @@ app.delete("/api/v1/vehicles/:vehicleId", async (req: Request, res: Response) =>
 app.listen(port, () => {
     console.log(`Server is running  on port ${port}`)
 });
+
+
+
+
 
 
