@@ -50,21 +50,19 @@ const initDB = async () => {
 
 
     await pool.query(`
-       CREATE TABLE IF NOT EXISTS Bookings(
-       id SERIAL PRIMARY KEY,
-       customer_id INT REFERENCES Users(id) ON DELETE CASCADE,
-       vehicle_id INT REFERENCES Vehicles(id) ON DELETE CASCADE,
-       rent_start_date DATE NOT NULL,
-       rent_end_date DATE NOT NULL CHECK (rent_end_date > rent_start_date),
-       status VARCHAR(20) NOT NULL CHECK (status IN ('active', 'cancelled', 'returned')),
-        create_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-       );
-
-
-     `);
+        CREATE TABLE IF NOT EXISTS Bookings(
+            id SERIAL PRIMARY KEY,
+            customer_id INT REFERENCES Users(id) ON DELETE CASCADE,
+            vehicle_id INT REFERENCES Vehicles(id) ON DELETE CASCADE,
+            rent_start_date DATE NOT NULL,
+            rent_end_date DATE NOT NULL CHECK (rent_end_date > rent_start_date),
+            total_price INT NOT NULL CHECK (total_price > 0), 
+            status VARCHAR(20) NOT NULL CHECK (status IN ('active', 'cancelled', 'returned')),
+            create_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+    `);
 };
-
 
 // init DB Call here
 
@@ -361,14 +359,63 @@ app.delete("/api/v1/vehicles/:vehicleId", async (req: Request, res: Response) =>
 });
 
 
-// Bookings CRUD
 
 
 
 
+// Bookings Crud
 
 
 
+app.post("/api/v1/bookings", async (req: Request, res: Response) => {
+    try {
+        const { customer_id, vehicle_id, rent_start_date, rent_end_date } = req.body;
+
+        const vehicleResult = await pool.query(
+            `SELECT vehicle_name, daily_rent_price FROM Vehicles WHERE id=$1`,
+            [vehicle_id]
+        );
+
+        if (vehicleResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Vehicle not found" });
+        }
+
+        const vehicle = vehicleResult.rows[0];
+
+        const startDate = new Date(rent_start_date);
+        const endDate = new Date(rent_end_date);
+        const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)) || 1;
+        const totalPrice = vehicle.daily_rent_price * durationDays;
+
+        await pool.query('BEGIN');
+
+        const bookingResult = await pool.query(
+            `INSERT INTO Bookings(customer_id, vehicle_id, rent_start_date, rent_end_date, total_price, status) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [customer_id, vehicle_id, rent_start_date, rent_end_date, totalPrice, "active"]
+        );
+
+        await pool.query(`UPDATE Vehicles SET availability_status = 'booked' WHERE id = $1`, [vehicle_id]);
+
+        await pool.query('COMMIT');
+
+        res.status(201).json({
+            success: true,
+            message: "Booking created successfully",
+            data: {
+                ...bookingResult.rows[0],
+                vehicle: {
+                    vehicle_name: vehicle.vehicle_name,
+                    daily_rent_price: vehicle.daily_rent_price,
+                }
+            }
+        });
+
+    } catch (err: any) {
+        await pool.query('ROLLBACK');
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 
 
