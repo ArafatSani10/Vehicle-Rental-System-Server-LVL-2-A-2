@@ -1,74 +1,33 @@
 
-import express, { Request, Response } from "express";
-import dotenv from "dotenv";
-import { Pool } from "pg";
-import path from "path";
+import express, { NextFunction, Request, Response } from "express";
 
-dotenv.config({ path: path.join(process.cwd(), ".env") });
+import config from "./config";
+import initDB, { pool } from "./config/db";
+import logger from "./middleware/logger";
+import { userRoutes } from "./modules/user/user.routes";
+
 const app = express();
-const port = 5000;
+const port = config.port;
 // parser
 app.use(express.json());
 
 
-// database
-const pool = new Pool({
-    connectionString: `${process.env.CONNECTION_STR}`,
-});
+// init DB Call here
+const startServer = async () => {
+    try {
+        await initDB();
+        console.log("✅ Database connected!");
 
-const initDB = async () => {
-    await pool.query(`
-
-        CREATE TABLE IF NOT EXISTS Users(
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        email VARCHAR(150) UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        phone VARCHAR(15) NOT NULL,
-        role VARCHAR(50) NOT NULL,
-        create_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-        );
-
-
-
-        `);
-
-
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS Vehicles(
-        id SERIAL PRIMARY KEY,
-        vehicle_name VARCHAR(100) NOT NULL,
-        type VARCHAR(10) NOT NULL CHECK (type IN ('car', 'bike', 'van', 'SUV')),
-        registration_number VARCHAR(50) UNIQUE NOT NULL,
-        daily_rent_price NUMERIC(10, 2) NOT NULL CHECK (daily_rent_price > 0),
-        availability_status VARCHAR(10) NOT NULL CHECK (availability_status IN ('available', 'booked'))
-        );
-
-
-       `);
-
-
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS Bookings(
-            id SERIAL PRIMARY KEY,
-            customer_id INT REFERENCES Users(id) ON DELETE CASCADE,
-            vehicle_id INT REFERENCES Vehicles(id) ON DELETE CASCADE,
-            rent_start_date DATE NOT NULL,
-            rent_end_date DATE NOT NULL CHECK (rent_end_date > rent_start_date),
-            total_price INT NOT NULL CHECK (total_price > 0), 
-            status VARCHAR(20) NOT NULL CHECK (status IN ('active', 'cancelled', 'returned')),
-            create_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        );
-    `);
+        app.listen(port, () => {
+            console.log(`🚀 Server is running on port ${port}`);
+        });
+    } catch (error) {
+        console.error("❌ Failed to start server:", error);
+    }
 };
 
-// init DB Call here
 
-initDB();
-
-app.get('/', (req: Request, res: Response) => {
+app.get('/', logger, (req: Request, res: Response) => {
     res.send('Next level Web development is running..!')
 });
 
@@ -78,29 +37,7 @@ app.get('/', (req: Request, res: Response) => {
 
 
 // Users CRUD
-
-// create user
-app.post("/api/v1/auth/signup", async (req: Request, res: Response) => {
-
-
-    try {
-        const result = await pool.query(
-            `INSERT INTO Users(name, email, phone) VALUES($1, $2, $3) RETURNING *`,
-            [req.body.name, req.body.email, req.body.phone]
-        );
-
-        res.status(201).json({
-            success: true,
-            message: "User registered successfully",
-            data: result.rows[0],
-        });
-    } catch (err: any) {
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
-    }
-});
+app.use("/api/v1/auth", userRoutes)
 
 
 // get all users
@@ -524,9 +461,20 @@ app.put("/api/v1/bookings/:bookingId", async (req: Request, res: Response) => {
 
 
 
-app.listen(port, () => {
-    console.log(`Server is running  on port ${port}`)
-});
+
+// not found route
+
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "Route Not found..!",
+        path: req.path
+    })
+})
+
+
+
+startServer();
 
 
 
