@@ -4,6 +4,7 @@ import express, { NextFunction, Request, Response } from "express";
 import config from "./config";
 import initDB, { pool } from "./config/db";
 import logger from "./middleware/logger";
+import { authRoutes } from "./modules/auth/auth.routes";
 import { userRoutes } from "./modules/user/user.routes";
 
 const app = express();
@@ -18,13 +19,13 @@ const startServer = async () => {
         await initDB();
         console.log("✅ Database connected!");
 
-        app.listen(port, () => {
-            console.log(`🚀 Server is running on port ${port}`);
-        });
+
     } catch (error) {
         console.error("❌ Failed to start server:", error);
     }
 };
+
+
 
 
 app.get('/', logger, (req: Request, res: Response) => {
@@ -36,35 +37,12 @@ app.get('/', logger, (req: Request, res: Response) => {
 
 
 
-// Users CRUD
-app.use("/api/v1/auth", userRoutes)
+// create users another route
+app.use("/api/v1/auth", authRoutes);
 
 
 // get all users
-
-app.get("/api/v1/users", async (req: Request, res: Response) => {
-
-    try {
-        const result = await pool.query(`
-
-        SELECT id,name,email,phone FROM Users
-        `);
-
-
-        res.status(200).json({
-            success: true,
-            data: result.rows
-        });
-    }
-
-    catch (err: any) {
-        res.status(500).json({
-            success: false,
-            message: err.message,
-        })
-    }
-
-});
+app.use("/api/v1/users", userRoutes);
 
 
 
@@ -475,6 +453,10 @@ app.use((req, res) => {
 
 
 startServer();
+
+app.listen(port, () => {
+    console.log(`🚀 Server is running on port ${port}`);
+});
 
 
 
