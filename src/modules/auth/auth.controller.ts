@@ -1,13 +1,12 @@
 import { Request, Response } from "express";
-import { pool } from "../../config/db";
 import { authService } from "./auth.service";
 
 const createUser = async (req: Request, res: Response) => {
 
 
     try {
-        const { name, email, phone } = req.body;
-        const result = await authService.createUser(name, email, phone)
+
+        const result = await authService.createUser(req.body)
 
         res.status(201).json({
             success: true,
@@ -22,8 +21,31 @@ const createUser = async (req: Request, res: Response) => {
             message: err.message
         });
     }
+};
+
+const signin = async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+
+    try {
+        const result = await authService.signin(email, password);
+
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            data: result
+        })
+    }
+    catch (err: any) {
+
+        res.status(500).json({
+            success: false,
+            message: err.message
+        })
+
+    }
 }
 
 export const authController = {
-    createUser
+    createUser,
+    signin
 }
