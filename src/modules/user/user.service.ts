@@ -7,7 +7,7 @@ const getUser = async () => {
             `);
 
     return result;
-}
+};
 
 const updateUser = async (name: string, email: string, phone: string, userId: string | undefined) => {
     const result = await pool.query(
@@ -16,7 +16,7 @@ const updateUser = async (name: string, email: string, phone: string, userId: st
     );
 
     return result;
-}
+};
 
 const deleteUser = async (userId: string | undefined) => {
     const result = await pool.query(
