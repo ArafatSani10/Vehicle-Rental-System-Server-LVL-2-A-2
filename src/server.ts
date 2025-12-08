@@ -6,6 +6,7 @@ import initDB, { pool } from "./config/db";
 import logger from "./middleware/logger";
 import { authRoutes } from "./modules/auth/auth.routes";
 import { userRoutes } from "./modules/user/user.routes";
+import { vehicleRoutes } from "./modules/vehicle/vehicle.route";
 
 const app = express();
 const port = config.port;
@@ -25,178 +26,13 @@ const startServer = async () => {
     }
 };
 
-
-
-
 app.get('/', logger, (req: Request, res: Response) => {
     res.send('Next level Web development is running..!')
 });
 
-
-
-
-
-
-// create users another route
 app.use("/api/v1/auth", authRoutes);
-// get all users
 app.use("/api/v1/users", userRoutes);
-
-// vehicles CRUD
-
-// add vehicles
-app.post("/api/v1/vehicles", async (req: Request, res: Response) => {
-    const { vehicle_name, type, registration_number, daily_rent_price, availability_status } = req.body;
-
-    try {
-        const result = await pool.query(`INSERT INTO Vehicles(vehicle_name,type,registration_number,daily_rent_price,availability_status) VALUES($1,$2,$3,$4,$5) RETURNING *`, [vehicle_name, type, registration_number, daily_rent_price, availability_status]);
-
-        const newVehicle = result.rows[0];
-
-        res.status(201).json({
-            success: true,
-            message: "Vehicle created successfully",
-            data: newVehicle
-        });
-    }
-    catch (err: any) {
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
-    }
-});
-
-
-// get all vehicles
-app.get("/api/v1/vehicles", async (req: Request, res: Response) => {
-    try {
-
-
-        const result = await pool.query(`SELECT * FROM Vehicles`);
-
-        const vehicles = result.rows;
-
-
-        if (vehicles.length > 0) {
-            res.status(200).json({
-                success: true,
-                message: "Vehicles retrieved successfully",
-                data: vehicles
-            });
-        }
-
-        else {
-            res.status(200).json({
-                success: true,
-                message: "No vehicles found",
-                data: [],
-            });
-        }
-    }
-
-    catch (err: any) {
-        res.status(500).json({
-            success: false,
-            message: err.message,
-        });
-    }
-});
-
-// vehicles details
-app.get("/api/v1/vehicles/:vehicleId", async (req: Request, res: Response) => {
-    try {
-        const { vehicleId } = req.params;
-
-        const result = await pool.query(`SELECT * FROM Vehicles WHERE id = $1`, [vehicleId]);
-
-        const vehicle = result.rows[0];
-
-        if (vehicle) {
-            res.status(200).json({
-                success: true,
-                message: "Vehicle retrieved successfully",
-                data: vehicle,
-            });
-        } else {
-            res.status(404).json({
-                success: false,
-                message: "Vehicle not found",
-            });
-        }
-    } catch (err: any) {
-        res.status(500).json({
-            success: false,
-            message: err.message,
-        });
-    }
-});
-
-
-// update vehicles
-app.put("/api/v1/vehicles/:vehicleId", async (req: Request, res: Response) => {
-    try {
-        const { vehicle_name, type, registration_number, daily_rent_price, availability_status } = req.body;
-        const { vehicleId } = req.params;
-
-        const result = await pool.query(
-            `UPDATE Vehicles SET vehicle_name=$1, type=$2, registration_number=$3, daily_rent_price=$4, availability_status=$5 WHERE id =$6 RETURNING *`,
-            [vehicle_name, type, registration_number, daily_rent_price, availability_status, vehicleId]
-        );
-
-
-        if (result.rows.length === 0) {
-            res.status(404).json({
-                success: false,
-                message: "Vehicle Not found.!",
-            });
-        } else {
-            res.status(200).json({
-                success: true,
-                message: "Vehicle updated successfully",
-                data: result.rows[0],
-            });
-        }
-    } catch (err: any) {
-        res.status(500).json({
-            success: false,
-            message: err.message,
-        });
-    }
-});
-
-// delete vehicles
-
-app.delete("/api/v1/vehicles/:vehicleId", async (req: Request, res: Response) => {
-    try {
-        const { vehicleId } = req.params;
-
-        const result = await pool.query(`DELETE FROM Vehicles WHERE id = $1`, [vehicleId]);
-
-        const vehicle = result.rowCount;
-
-        if (vehicle) {
-            res.status(200).json({
-                success: true,
-                message: "Vehicle deleted successfully",
-                data: null,
-            });
-        } else {
-            res.status(404).json({
-                success: false,
-                message: "Vehicle not found",
-            });
-        }
-    } catch (err: any) {
-        res.status(500).json({
-            success: false,
-            message: err.message,
-        });
-    }
-});
-
-
-
+app.use("/api/v1/vehicles", vehicleRoutes);
 
 
 
