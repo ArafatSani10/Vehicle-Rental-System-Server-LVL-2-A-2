@@ -28,20 +28,50 @@ const createBooking = async (req: Request, res: Response) => {
 };
 const getBooking = async (req: Request, res: Response) => {
     try {
-        const result = await bookingService.getAllBookingsService();
+        const userRole = (req as any).user?.role;
+        const isAdmin = userRole === 'admin';
+
+        const result: any[] = await bookingService.getAllBookingsService();
+
+        let successMessage: string;
+        let noBookingsMessage: string;
+        let processedData: any[];
+
+        if (isAdmin) {
+            successMessage = "Bookings retrieved successfully";
+            noBookingsMessage = "No bookings found in the system.";
+
+
+            processedData = result;
+
+        } else {
+            successMessage = "Your bookings retrieved successfully";
+            noBookingsMessage = "You currently have no active bookings.";
+
+
+            processedData = result.map((booking: any) => ({
+                id: booking.id,
+                vehicle_id: booking.vehicle_id,
+                rent_start_date: booking.rent_start_date,
+                rent_end_date: booking.rent_end_date,
+                total_price: booking.total_price,
+                status: booking.status,
+                vehicle: booking.vehicle
+            }));
+        }
 
         if (result.length === 0) {
             return res.status(200).json({
                 success: true,
-                message: "No bookings found",
+                message: noBookingsMessage,
                 data: []
             });
         }
 
         res.status(200).json({
             success: true,
-            message: "Bookings retrieved successfully",
-            data: result
+            message: successMessage,
+            data: processedData
         });
 
     } catch (err: any) {

@@ -59,16 +59,22 @@ const createBookingService = async (payload: Record<string, unknown>) => {
 };
 const getAllBookingsService = async () => {
 
+    
     const getBookingsQuery = `
         SELECT 
-            b.id AS booking_id, 
+            b.id AS id, 
+            b.customer_id, 
+            b.vehicle_id, 
             b.rent_start_date, 
             b.rent_end_date, 
             b.total_price, 
             b.status,
-            u.name AS customer_name, 
+            u.name AS customer_name,
+            u.email AS customer_email, -- Added email
             v.vehicle_name, 
-            v.daily_rent_price
+            v.registration_number,    -- Added registration_number
+            v.daily_rent_price,
+            v.type AS vehicle_type    -- Added vehicle type for potential customer view use
         FROM Bookings b
         JOIN Users u ON b.customer_id = u.id
         JOIN Vehicles v ON b.vehicle_id = v.id
@@ -81,7 +87,28 @@ const getAllBookingsService = async () => {
         return [];
     }
 
-    return result.rows;
+    const nestedBookings = result.rows.map((row: any) => ({
+        id: row.id,
+        customer_id: row.customer_id,
+        vehicle_id: row.vehicle_id,
+        rent_start_date: row.rent_start_date,
+        rent_end_date: row.rent_end_date,
+        total_price: row.total_price,
+        status: row.status,
+        
+        customer: {
+            name: row.customer_name,
+            email: row.customer_email,
+        },
+        
+        vehicle: {
+            vehicle_name: row.vehicle_name,
+            registration_number: row.registration_number,
+            type: row.vehicle_type,
+        }
+    }));
+
+    return nestedBookings;
 };
 const updateOne = async (bookingId: number, status: string) => {
     let client: any = null;
