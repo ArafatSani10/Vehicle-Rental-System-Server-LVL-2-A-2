@@ -59,7 +59,7 @@ const createBookingService = async (payload: Record<string, unknown>) => {
 };
 const getAllBookingsService = async () => {
 
-    
+
     const getBookingsQuery = `
         SELECT 
             b.id AS id, 
@@ -95,12 +95,12 @@ const getAllBookingsService = async () => {
         rent_end_date: row.rent_end_date,
         total_price: row.total_price,
         status: row.status,
-        
+
         customer: {
             name: row.customer_name,
             email: row.customer_email,
         },
-        
+
         vehicle: {
             vehicle_name: row.vehicle_name,
             registration_number: row.registration_number,
